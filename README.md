@@ -96,8 +96,39 @@ data-volume confound (PRD 3.5 / 5.3).
 ## Compute
 
 The real matrix needs CUDA GPUs (PRD section 8; ~700 GPU-h, ~$1-1.9k). Develop
-locally; run Tier-1 on rented A100/H100. The `notebooks/t4_validation.ipynb`
-validates the real model path on a free Colab/Kaggle T4 before spending budget.
+locally; run Tier-1 on rented A100/H100.
+
+### How to run on a GPU
+
+| Path | Cost | Where | Use for |
+|---|---|---|---|
+| **Kaggle** | free (~30 GPU-h/week) | `notebooks/kaggle_validation.ipynb` | validate the real model path |
+| **Colab** | free (limits apply) | `notebooks/t4_validation.ipynb` | validate the real model path |
+| **RunPod/Vast/Lambda** | ~$0.2-2.5/hr | `scripts/cloud_setup.sh` | Tier-1 matrix |
+
+**Kaggle (free).** New notebook -> Upload `notebooks/kaggle_validation.ipynb` (or
+`File > Import`). Right sidebar -> Accelerator **GPU T4 x2**, Internet **On** ->
+**Run all**.
+
+**Rented GPU (one command).** On the fresh GPU instance:
+
+```bash
+git clone https://github.com/AbhiGuru25/Recursive-self-improvement-RSI.git
+cd Recursive-self-improvement-RSI
+bash scripts/cloud_setup.sh            # install + tests + tiny GPU smoke run
+bash scripts/cloud_setup.sh --full     # print the Tier-1 matrix plan before spending
+```
+
+### Running the Tier-1 matrix
+
+```bash
+# always dry-run first to see scope and estimate cost
+python scripts/run_matrix.py --base configs/tier1_verifier_axis.yaml --dry-run
+
+# launch a subset (identification-critical cells) on 3 seeds
+python scripts/run_matrix.py --base configs/tier1_verifier_axis.yaml \
+    --cells verifier_axis loop_ablation --seeds 3
+```
 
 ## Reproducibility
 
