@@ -1,0 +1,75 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rsi-plateau"
+version = "0.1.0"
+description = "Diagnosing plateaus in recursive self-improvement loops"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy>=1.26",
+    "pandas>=2.1",
+    "scikit-learn>=1.4",
+    "scipy>=1.11",
+    "pyyaml>=6.0",
+    "tqdm>=4.66",
+    "datasets>=2.18",
+    "regex>=2023.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4",
+    "pytest-cov>=4.1",
+    "ruff>=0.4",
+]
+# CPU smoke path: tiny model, no CUDA required
+tier0 = [
+    "torch>=2.2",
+    "transformers>=4.41",
+    "peft>=0.11",
+    "trl>=0.9",
+    "accelerate>=0.30",
+    "sentence-transformers>=2.7",
+]
+# Full GPU pipeline
+tier1 = [
+    "rsi-plateau[tier0]",
+    "vllm>=0.5",
+    "ruptures>=1.1",
+    "statsmodels>=0.14",
+    "wandb>=0.17",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = [
+    "B905",  # zip() without strict= is fine for py310 research code
+    "E501",  # line length handled by the formatter; long f-strings/prompts are fine
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Optional-dependency boundaries intentionally catch broad exceptions
+# (torch/peft/wandb/ruptures absent on the CPU path) and swallow failures.
+"src/rsi_plateau/utils/repro.py" = ["BLE001", "S110", "S112"]
+"src/rsi_plateau/utils/wandb_logger.py" = ["BLE001"]
+"src/rsi_plateau/data/gsm8k.py" = ["BLE001", "S112"]
+"src/rsi_plateau/stats/changepoint.py" = ["BLE001"]
+"src/rsi_plateau/training/__init__.py" = ["BLE001", "S110"]
+"scripts/aggregate_results.py" = ["BLE001"]
+# Tests use asserts by design.
+"tests/**" = ["S101", "B011"]

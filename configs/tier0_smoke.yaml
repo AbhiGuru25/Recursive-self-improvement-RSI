@@ -1,0 +1,67 @@
+# Tier-0 CPU smoke configuration.
+# Purpose: validate the full loop wiring end-to-end on a laptop, cheaply.
+# Produces NO publishable numbers -- only a plumbing check.
+
+run:
+  name: tier0_smoke
+  seed: 0
+  rounds: 3
+  output_dir: artifacts/tier0_smoke
+  dry_run: false
+  use_wandb: false
+
+data:
+  dataset: gsm8k
+  # Small subsets so CPU generation is tractable.
+  train_size: 40
+  test_size: 100
+  # Contamination / baseline floor check (PRD 5.1)
+  contamination_check: false
+
+model:
+  # Tiny same-family model so the STaR/ReST logic is exercised on CPU.
+  policy: Qwen/Qwen2.5-0.5B-Instruct
+  dtype: float32
+  device: cpu
+  # Judge is unused in the default smoke config (oracle only).
+  judge: null
+
+generation:
+  k_samples: 2              # N samples per question
+  temperature: 0.8
+  top_p: 0.95
+  max_new_tokens: 256
+  batch_size: 4
+
+verifier:
+  type: oracle              # oracle | llm_judge
+  # alpha-matching target; null = use this verifier's natural acceptance rate
+  match_acceptance_rate: null
+  calibration_size: 0       # skip judge calibration in smoke path
+
+loop:
+  architecture: star        # star (continuation) | rest (restart-from-base)
+  frozen_reference_diversity: true   # compute reference-normalized rho (H2)
+
+training:
+  method: lora              # lora | qlora
+  lora_r: 8
+  lora_alpha: 16
+  lora_dropout: 0.05
+  learning_rate: 0.0001
+  epochs: 1
+  batch_size: 2
+  grad_accum: 4
+  max_seq_len: 512
+
+diversity:
+  output_entropy: true
+  embedding_clustering: false   # sentence-transformers is heavy; off in smoke
+  self_bleu: true
+  n_clusters: null
+
+stats:
+  bootstrap_samples: 200
+  ci_alpha: 0.05
+  plateau_abs_delta: 0.005
+  plateau_consecutive: 2

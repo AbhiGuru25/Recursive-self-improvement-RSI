@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# Virtual env
+.venv/
+venv/
+
+# Tool caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Experiment outputs (keep the frozen pre-registration)
+artifacts/*
+!artifacts/PREREGISTRATION.md
+wandb/
+
+# Model/dataset caches
+.cache/
+data/*.jsonl
+
+# Editor
+.vscode/
+.idea/
+*.swp

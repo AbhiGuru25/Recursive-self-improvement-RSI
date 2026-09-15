@@ -1,0 +1,63 @@
+# Tier-1 target configuration skeleton (paper run matrix).
+# See PRD section 5.10. Fill in verifier/scale blocks per cell before launch.
+# DO NOT run verbatim without reviewing compute budget (PRD section 8).
+
+run:
+  name: tier1_verifier_axis_7b_oracle
+  seed: 0
+  rounds: 6
+  output_dir: artifacts/tier1
+  use_wandb: true
+  wandb_project: rsi-plateau
+
+data:
+  dataset: gsm8k
+  train_size: null          # null = full GSM8K train (~7.5k)
+  test_size: null           # null = full GSM8K test (1319)
+  contamination_check: true
+
+model:
+  policy: Qwen/Qwen2.5-7B-Instruct
+  dtype: bfloat16
+  device: cuda
+  judge: null               # set per verifier condition below
+
+generation:
+  k_samples: 8
+  temperature: 0.8
+  top_p: 0.95
+  max_new_tokens: 512
+  batch_size: 64
+
+verifier:
+  # One of: oracle | strong_cross | weak | same_family
+  type: oracle
+  match_acceptance_rate: true   # alpha-match judges to oracle's acceptance rate
+  calibration_size: 500
+
+loop:
+  architecture: star            # primary; rest is the ablation
+  frozen_reference_diversity: true
+
+training:
+  method: qlora
+  lora_r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  learning_rate: 0.0001
+  epochs: 1
+  batch_size: 8
+  grad_accum: 4
+  max_seq_len: 1024
+
+diversity:
+  output_entropy: true
+  embedding_clustering: true
+  self_bleu: true
+  n_clusters: null
+
+stats:
+  bootstrap_samples: 2000
+  ci_alpha: 0.05
+  plateau_abs_delta: 0.005
+  plateau_consecutive: 2
