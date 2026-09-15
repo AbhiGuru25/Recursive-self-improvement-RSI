@@ -30,6 +30,7 @@ class LoRATrainer(Trainer):
         grad_accum: int = 4,
         max_seq_len: int = 1024,
         device: str = "cuda",
+        precision: str = "auto",
         output_dir: str = "artifacts/adapters",
         prompt_template: str = GSM8K_PROMPT,
     ):
@@ -44,6 +45,7 @@ class LoRATrainer(Trainer):
         self.grad_accum = grad_accum
         self.max_seq_len = max_seq_len
         self.device = device
+        self.precision = precision
         self.output_dir = Path(output_dir)
         self.prompt_template = prompt_template
         self._adapter_dir: Path | None = None
@@ -51,20 +53,61 @@ class LoRATrainer(Trainer):
         self._model = None
         self._tokenizer = None
 
+    # -- precision / dtype ------------------------------------------------
+    def _resolve_dtype(self):
+        """Pick a training dtype that the device actually supports.
+
+        T4 (Turing) has no bf16, so 'auto' must select fp16 there; A100/H100
+        prefer bf16. CPU falls back to fp32.
+        """
+        import torch
+
+        if self.precision != "auto":
+            return {
+                "bf16": torch.bfloat16,
+                "fp16": torch.float16,
+                "float16": torch.float16,
+                "fp32": torch.float32,
+                "float32": torch.float32,
+            }.get(self.precision, torch.float32)
+
+        if self.device == "cpu" or not torch.cuda.is_available():
+            return torch.float32
+        if torch.cuda.is_bf16_supported():
+            return torch.bfloat16
+        return torch.float16
+
+    def _bf16_enabled(self) -> bool:
+        import torch
+
+        return self.device != "cpu" and torch.cuda.is_available() and torch.cuda.is_bf16_supported()
+
+    def _fp16_enabled(self) -> bool:
+        import torch
+
+        if self.device == "cpu" or not torch.cuda.is_available():
+            return False
+        return not torch.cuda.is_bf16_supported()
+
     # -- lifecycle --------------------------------------------------------
     def _ensure_base(self) -> None:
         if self._model is not None:
             return
-        import torch
         from transformers import AutoModelForCausalLM, AutoTokenizer
 
-        dtype = torch.bfloat16 if self.device != "cpu" else torch.float32
+        dtype = self._resolve_dtype()
         self._tokenizer = AutoTokenizer.from_pretrained(self.base_model)
         if self._tokenizer.pad_token is None:
             self._tokenizer.pad_token = self._tokenizer.eos_token
-        self._model = AutoModelForCausalLM.from_pretrained(
-            self.base_model, torch_dtype=dtype
-        )
+        # transformers >=5 renamed torch_dtype -> dtype; support both.
+        try:
+            self._model = AutoModelForCausalLM.from_pretrained(
+                self.base_model, dtype=dtype
+            )
+        except TypeError:
+            self._model = AutoModelForCausalLM.from_pretrained(
+                self.base_model, torch_dtype=dtype
+            )
         if self.device == "cpu":
             self._model = self._model.to("cpu")
 
@@ -112,19 +155,29 @@ class LoRATrainer(Trainer):
         ds = Dataset.from_list(records).map(_fmt)
 
         out = self.output_dir / f"round_{self._round}"
-        sft_cfg = SFTConfig(
+        sft_kwargs = dict(
             output_dir=str(out),
             num_train_epochs=self.epochs,
             per_device_train_batch_size=self.batch_size,
             gradient_accumulation_steps=self.grad_accum,
             learning_rate=self.learning_rate,
-            max_seq_length=self.max_seq_len,
             logging_steps=10,
             save_strategy="no",
             report_to=[],
-            bf16=self.device != "cpu",
+            bf16=self._bf16_enabled(),
+            fp16=self._fp16_enabled(),
         )
-        trainer = SFTTrainer(model=model, args=sft_cfg, train_dataset=ds)
+        # TRL renamed max_seq_length -> max_length across versions.
+        try:
+            sft_cfg = SFTConfig(max_seq_length=self.max_seq_len, **sft_kwargs)
+        except TypeError:
+            sft_cfg = SFTConfig(max_length=self.max_seq_len, **sft_kwargs)
+        trainer = SFTTrainer(
+            model=model,
+            args=sft_cfg,
+            train_dataset=ds,
+            processing_class=self._tokenizer,
+        )
         train_out = trainer.train()
 
         out.mkdir(parents=True, exist_ok=True)

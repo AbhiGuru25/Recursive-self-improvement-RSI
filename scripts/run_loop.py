@@ -61,6 +61,7 @@ def _build_components(cfg, stub: bool):
         grad_accum=cfg.training.grad_accum,
         max_seq_len=cfg.training.max_seq_len,
         device=cfg.model.device,
+        precision=cfg.training.get_path("precision", "auto"),
     )
     return generator, trainer, cfg.model.policy
 
