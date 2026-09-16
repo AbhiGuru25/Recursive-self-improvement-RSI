@@ -45,11 +45,19 @@ class HFGenerator(Generator):
             "auto": "auto",
         }
         self._tokenizer = AutoTokenizer.from_pretrained(self.model_name_or_path)
-        self._model = AutoModelForCausalLM.from_pretrained(
-            self.model_name_or_path,
-            torch_dtype=dtype_map.get(self.dtype, "auto"),
-            device_map=None if self.device == "cpu" else self.device,
-        )
+        if self._tokenizer.pad_token_id is None:
+            self._tokenizer.pad_token = self._tokenizer.eos_token
+        # Left padding is required for batched decoder-only generation.
+        self._tokenizer.padding_side = "left"
+        dtype = dtype_map.get(self.dtype, "auto")
+        try:  # transformers >=5 renamed torch_dtype -> dtype
+            self._model = AutoModelForCausalLM.from_pretrained(
+                self.model_name_or_path, dtype=dtype
+            )
+        except TypeError:
+            self._model = AutoModelForCausalLM.from_pretrained(
+                self.model_name_or_path, torch_dtype=dtype
+            )
         if self.device == "cpu":
             self._model = self._model.to("cpu")
         self._model.eval()
@@ -73,37 +81,76 @@ class HFGenerator(Generator):
 
         self._load()
         assert self._model is not None and self._tokenizer is not None
-        results: list[list[Generation]] = []
-        for q in questions:
-            prompt = build_prompt(self.prompt_template, q)
-            enc = self._tokenizer(prompt, return_tensors="pt").to(self._model.device)
-            with torch.no_grad():
-                out = self._model.generate(
-                    **enc,
-                    do_sample=temperature > 0,
+        tok = self._tokenizer
+        model = self._model
+        do_sample = temperature > 0
+
+        # Greedy decoding only supports num_return_sequences=1.
+        n_return = k if do_sample else 1
+        bs = max(1, self.batch_size)
+        results: list[list[Generation]] = [[] for _ in questions]
+
+        try:
+            from tqdm.auto import tqdm
+
+            batches = tqdm(
+                range(0, len(questions), bs),
+                desc=f"generate (k={k}, bs={bs})",
+                leave=False,
+            )
+        except Exception:  # pragma: no cover - tqdm always present
+            batches = range(0, len(questions), bs)
+
+        for start in batches:
+            batch_qs = questions[start : start + bs]
+            prompts = [build_prompt(self.prompt_template, q) for q in batch_qs]
+            enc = tok(
+                prompts,
+                return_tensors="pt",
+                padding=True,
+                truncation=True,
+                max_length=2048,
+            ).to(model.device)
+            input_len = enc["input_ids"].shape[1]
+            gen_kwargs: dict[str, Any] = {
+                "max_new_tokens": max_new_tokens,
+                "num_return_sequences": n_return,
+                "return_dict_in_generate": True,
+                "pad_token_id": tok.pad_token_id,
+            }
+            if do_sample:
+                gen_kwargs.update(
+                    do_sample=True,
                     temperature=max(temperature, 1e-5),
                     top_p=top_p,
-                    max_new_tokens=max_new_tokens,
-                    num_return_sequences=k,
-                    return_dict_in_generate=True,
-                    output_scores=True,
-                    pad_token_id=self._tokenizer.pad_token_id or self._tokenizer.eos_token_id,
                 )
-            first_scores = out.scores[0] if out.scores else None
-            for seq_idx in range(k):
-                seq = out.sequences[seq_idx][enc["input_ids"].shape[1]:]
-                text = self._tokenizer.decode(seq, skip_special_tokens=True)
-                logprobs: list[float] = []
-                if first_scores is not None:
-                    lp = torch.log_softmax(first_scores[seq_idx], dim=-1)
-                    logprobs.append(float(lp[seq[0]].item()) if seq.numel() else 0.0)
-                results.append([])
-                results[-1].append(
-                    Generation(
-                        question=q,
-                        text=text,
-                        token_ids=seq.tolist(),
-                        token_logprobs=logprobs,
+            else:
+                gen_kwargs.update(do_sample=False)
+
+            with torch.no_grad():
+                out = model.generate(**enc, **gen_kwargs)
+
+            for i, q in enumerate(batch_qs):
+                for j in range(n_return):
+                    idx = i * n_return + j
+                    seq = out.sequences[idx][input_len:]
+                    text = tok.decode(seq, skip_special_tokens=True)
+                    results[start + i].append(
+                        Generation(
+                            question=q,
+                            text=text,
+                            token_ids=seq.tolist(),
+                        )
                     )
-                )
+                # If greedy but k>1 was requested, replicate the single sample.
+                if n_return == 1 and k > 1:
+                    base = results[start + i][0]
+                    for _ in range(k - 1):
+                        results[start + i].append(
+                            Generation(
+                                question=q,
+                                text=base.text,
+                                token_ids=list(base.token_ids),
+                            )
+                        )
         return results
