@@ -24,6 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from rsi_plateau.data.gsm8k import load_gsm8k
 from rsi_plateau.loop import LoopRunner
 from rsi_plateau.utils.config import load_config
+from rsi_plateau.utils.gpu import pin_single_gpu
 from rsi_plateau.utils.repro import run_metadata, save_json, seed_everything
 from rsi_plateau.utils.wandb_logger import RunLogger
 from rsi_plateau.verifiers import build_verifier
@@ -74,6 +75,14 @@ def main() -> None:
     args = ap.parse_args()
 
     cfg = load_config(args.config)
+    # Pin to one GPU BEFORE any torch/CUDA init: HF Trainer auto-wraps the
+    # model in DataParallel on multi-GPU boxes, which breaks PEFT/TRL.
+    pinned = pin_single_gpu(
+        cfg.model.get_path("device", "cuda"),
+        int(cfg.model.get_path("device_index", 0)),
+    )
+    if pinned is not None:
+        print(f"[gpu] single-GPU mode: CUDA_VISIBLE_DEVICES={pinned}")
     seed_everything(cfg.run.seed)
 
     train = load_gsm8k("train", size=cfg.data.train_size, seed=cfg.run.seed)

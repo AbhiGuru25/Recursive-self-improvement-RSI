@@ -20,6 +20,7 @@ model:
   policy: Qwen/Qwen2.5-7B-Instruct
   dtype: bfloat16
   device: cuda
+  device_index: 0           # single-GPU only: HF DataParallel breaks PEFT/TRL
   judge: null               # set per verifier condition below
 
 generation:
