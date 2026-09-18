@@ -26,3 +26,21 @@ def pin_single_gpu(device: str = "cuda", device_index: int = 0) -> str | None:
     idx = str(device_index)
     os.environ["CUDA_VISIBLE_DEVICES"] = idx
     return idx
+
+
+def resolve_device(device: str = "cuda") -> str:
+    """Resolve a requested device to one torch can actually use.
+
+    Returns ``"cuda"`` only when CUDA is available, else ``"cpu"``. Never
+    raises — safe to call on machines without torch or without a GPU.
+    """
+    if device == "cpu":
+        return "cpu"
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            return "cuda"
+    except Exception:
+        pass
+    return "cpu"

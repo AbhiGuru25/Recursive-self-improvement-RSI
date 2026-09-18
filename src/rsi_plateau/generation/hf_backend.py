@@ -68,9 +68,15 @@ class HFGenerator(Generator):
                     )
                     break
                 continue
-        if self.device == "cpu":
-            self._model = self._model.to("cpu")
+        from ..utils.gpu import resolve_device
+
+        dev = resolve_device(self.device)
+        # CPU matmuls in fp16/bf16 are slow or unsupported; fall back to fp32.
+        if dev == "cpu" and dtype in (torch.float16, torch.bfloat16):
+            self._model = self._model.to(torch.float32)
+        self._model = self._model.to(dev)
         self._model.eval()
+        print(f"[generate] {self.model_name_or_path} on {dev} (dtype={dtype})")
 
     def set_policy(self, policy: Any) -> None:
         if isinstance(policy, str):

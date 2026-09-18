@@ -37,13 +37,19 @@ class HFJudgeBackend:
         self._tokenizer = AutoTokenizer.from_pretrained(self.model_name_or_path)
         if self._tokenizer.pad_token is None:
             self._tokenizer.pad_token = self._tokenizer.eos_token
+        from ..utils.gpu import resolve_device
+
+        dtype = dtype_map.get(self.dtype, "auto")
         self._model = AutoModelForCausalLM.from_pretrained(
             self.model_name_or_path,
-            torch_dtype=dtype_map.get(self.dtype, "auto"),
+            torch_dtype=dtype,
         )
-        if self.device == "cpu":
-            self._model = self._model.to("cpu")
+        dev = resolve_device(self.device)
+        if dev == "cpu" and dtype in (torch.float16, torch.bfloat16):
+            self._model = self._model.to(torch.float32)
+        self._model = self._model.to(dev)
         self._model.eval()
+        print(f"[judge] {self.model_name_or_path} on {dev} (dtype={dtype})")
 
     def generate_texts(
         self,
