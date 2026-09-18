@@ -66,3 +66,16 @@ def test_plateau_detected():
     result = runner.run(train, test, handle)
     assert result.plateau is not None
     assert "plateau_round" in result.plateau
+
+
+def test_checkpoint_written_per_round(tmp_path):
+    import json
+
+    ckpt = tmp_path / "result.json"
+    runner, train, test, handle = _runner()
+    runner.checkpoint_path = str(ckpt)
+    result = runner.run(train, test, handle)
+    assert ckpt.exists()
+    saved = json.loads(ckpt.read_text(encoding="utf-8"))
+    assert saved["partial"] is True
+    assert len(saved["result"]["rounds"]) == len(result.rounds) == 4

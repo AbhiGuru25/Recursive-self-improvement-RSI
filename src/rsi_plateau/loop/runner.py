@@ -23,6 +23,7 @@ from ..diversity.selfbleu import mean_self_bleu
 from ..generation.base import Generator
 from ..stats.plateau import PlateauResult, detect_plateau
 from ..training.base import Trainer
+from ..utils.repro import save_json
 from ..verifiers.alpha import AlphaMatcher
 from ..verifiers.base import Verifier
 
@@ -86,6 +87,7 @@ class LoopRunner:
         frozen_reference_diversity: bool = True,
         logger: Any = None,
         fixed_data: bool = False,
+        checkpoint_path: str | None = None,
     ):
         self.config_name = config_name
         self.architecture = architecture
@@ -105,6 +107,7 @@ class LoopRunner:
         self.frozen_reference_diversity = frozen_reference_diversity
         self.logger = logger
         self.fixed_data = fixed_data
+        self.checkpoint_path = checkpoint_path
         self.diversity_tracker = DiversityTracker()
         self.calibration_report: dict | None = None
 
@@ -297,6 +300,13 @@ class LoopRunner:
             )
             if self.logger is not None:
                 self.logger.log_round(result.rounds[-1])
+            # Checkpoint after every round so an interrupted run (dropped
+            # session, idle timeout) still leaves analyzable partial results.
+            if self.checkpoint_path is not None:
+                save_json(
+                    {"result": result.to_dict(), "partial": True},
+                    self.checkpoint_path,
+                )
 
         plateau: PlateauResult = detect_plateau(
             per_round_correct,

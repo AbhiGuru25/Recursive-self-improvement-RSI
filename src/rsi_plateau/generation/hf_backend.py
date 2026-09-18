@@ -50,14 +50,24 @@ class HFGenerator(Generator):
         # Left padding is required for batched decoder-only generation.
         self._tokenizer.padding_side = "left"
         dtype = dtype_map.get(self.dtype, "auto")
-        try:  # transformers >=5 renamed torch_dtype -> dtype
-            self._model = AutoModelForCausalLM.from_pretrained(
-                self.model_name_or_path, dtype=dtype
-            )
-        except TypeError:
-            self._model = AutoModelForCausalLM.from_pretrained(
-                self.model_name_or_path, torch_dtype=dtype
-            )
+        load_kwargs: dict[str, Any] = {"dtype": dtype} if self.dtype != "auto" else {}
+        # SDPA attention is far faster than eager on T4/A100; fall back gracefully.
+        for attn in ("sdpa", None):
+            try:
+                kwargs = dict(load_kwargs)
+                if attn is not None:
+                    kwargs["attn_implementation"] = attn
+                self._model = AutoModelForCausalLM.from_pretrained(
+                    self.model_name_or_path, **kwargs
+                )
+                break
+            except (TypeError, ValueError):
+                if attn is None:  # last resort: legacy torch_dtype kwarg
+                    self._model = AutoModelForCausalLM.from_pretrained(
+                        self.model_name_or_path, torch_dtype=dtype
+                    )
+                    break
+                continue
         if self.device == "cpu":
             self._model = self._model.to("cpu")
         self._model.eval()

@@ -89,6 +89,8 @@ def main() -> None:
         project=cfg.run.get_path("wandb_project", "rsi-plateau"),
         config=dict(cfg),
     )
+    out_dir = Path(cfg.run.output_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
     runner = LoopRunner(
         config_name=cfg.run.name,
         architecture=cfg.loop.architecture,
@@ -107,6 +109,7 @@ def main() -> None:
         frozen_reference_diversity=cfg.loop.frozen_reference_diversity,
         logger=logger,
         fixed_data=cfg.loop.get_path("fixed_data", False),
+        checkpoint_path=str(out_dir / "result.json"),
     )
 
     # Calibrate judges against oracle labels before running the loop (PRD 5.3).
@@ -135,7 +138,6 @@ def main() -> None:
             )
 
     result = runner.run(train, test, handle)
-    out_dir = Path(cfg.run.output_dir)
     save_json({"metadata": run_metadata(), "result": result.to_dict()}, out_dir / "result.json")
 
     print(f"run={cfg.run.name} arch={cfg.loop.architecture} verifier={verifier.name}")
