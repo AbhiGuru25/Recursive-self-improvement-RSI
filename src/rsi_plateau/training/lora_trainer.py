@@ -132,11 +132,16 @@ class LoRATrainer(Trainer):
         self._ensure_base()
         assert self._model is not None and self._tokenizer is not None
 
-        # Continue from the previous adapter if present (STaR continuation).
+        # Continue from the previous adapter if present (STaR continuation):
+        # fold it into the base weights, then train ONE fresh adapter on top.
+        # Stacking adapters (get_peft_model on an already-adapted model) breaks
+        # TRL's chunked-CE backbone resolution (CausalLMOutput has no
+        # last_hidden_state) and wastes memory.
         if self._adapter_dir is not None:
             from peft import PeftModel
 
-            self._model = PeftModel.from_pretrained(self._model, str(self._adapter_dir))
+            adapted = PeftModel.from_pretrained(self._model, str(self._adapter_dir))
+            self._model = adapted.merge_and_unload()
 
         lora_cfg = LoraConfig(
             r=self.lora_r,
@@ -166,6 +171,8 @@ class LoRATrainer(Trainer):
             report_to=[],
             bf16=self._bf16_enabled(),
             fp16=self._fp16_enabled(),
+            # transformers>=5 refuses CPU training without this explicit flag.
+            use_cpu=(self.device == "cpu"),
         )
         # TRL renamed max_seq_length -> max_length across versions.
         try:
