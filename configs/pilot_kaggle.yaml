@@ -1,0 +1,64 @@
+# Reduced Kaggle pilot (free tier). Sized to finish runs in ~1-2 GPU-hours each
+# on a single T4 so the whole pilot fits inside ~30 GPU-hrs/week.
+#
+# Scope (see PRD): H1 (verifier ceiling) + H2 (diversity, measured on every run).
+# H3 (scale) is out of scope for the free pilot; note it as a limitation.
+
+run:
+  name: pilot
+  seed: 0
+  rounds: 3
+  output_dir: artifacts/pilot
+  use_wandb: false
+
+data:
+  dataset: gsm8k
+  train_size: 200
+  test_size: 150
+
+model:
+  policy: Qwen/Qwen2.5-1.5B-Instruct
+  dtype: float16
+  device: cuda
+  device_index: 0
+  judge: null
+
+generation:
+  k_samples: 3
+  temperature: 0.8
+  top_p: 0.95
+  max_new_tokens: 192
+  batch_size: 32
+
+verifier:
+  type: oracle
+  match_acceptance_rate: false
+  calibration_size: 0
+
+loop:
+  architecture: star
+  frozen_reference_diversity: true
+  fixed_data: false
+
+training:
+  method: lora
+  lora_r: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  learning_rate: 0.0001
+  epochs: 1
+  batch_size: 4
+  grad_accum: 4
+  max_seq_len: 512
+  precision: auto
+
+diversity:
+  output_entropy: true
+  embedding_clustering: false
+  self_bleu: true
+
+stats:
+  bootstrap_samples: 500
+  ci_alpha: 0.05
+  plateau_abs_delta: 0.005
+  plateau_consecutive: 2

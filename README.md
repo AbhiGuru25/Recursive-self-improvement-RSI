@@ -130,6 +130,28 @@ python scripts/run_matrix.py --base configs/tier1_verifier_axis.yaml \
     --cells verifier_axis loop_ablation --seeds 3
 ```
 
+### Kaggle-only reduced pilot (free, ~2 weeks)
+
+The full matrix needs a rented GPU. The free-tier fallback is a reduced pilot
+(`configs/pilot_kaggle.yaml`, 1.5B policy, 3 rounds) covering H1 + controls:
+
+```bash
+python scripts/run_pilot.py --list                 # show available jobs
+python scripts/run_pilot.py --jobs oracle weak --seeds 2 --dry-run
+python scripts/run_pilot.py --jobs oracle weak --seeds 2   # week 1: H1 headline
+python scripts/run_pilot.py --jobs random_filter fixed_data rest --seeds 2  # week 2
+```
+
+- **Week 1:** `oracle`, `weak` x 2 seeds = 4 jobs (~6-8 GPU-h). The H1 headline.
+- **Week 2:** `random_filter`, `fixed_data`, `rest` x 2 seeds = 6 jobs. Attribution.
+- Completed jobs are **skipped on re-run**; every round checkpoints to
+  `result.json`, so dropped sessions lose nothing. Re-running the same command
+  resumes the plan.
+- Across weeks: download `artifacts/pilot/`, re-upload as a Kaggle dataset,
+  attach as Input — the pilot notebook's restore cell copies prior results in.
+- Explicitly out of scope for the free pilot: H3 scale (3B/7B/14B) and the
+  7B/Llama judges (don't fit a 16 GB T4). Note these as limitations.
+
 ## Reproducibility
 
 - Pinned deps in `pyproject.toml`; run metadata (git hash, GPU, torch) saved with

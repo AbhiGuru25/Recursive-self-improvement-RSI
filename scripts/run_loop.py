@@ -14,6 +14,7 @@ Real CPU smoke run (Qwen2.5-0.5B, small GSM8K subset):
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -100,6 +101,16 @@ def main() -> None:
     )
     out_dir = Path(cfg.run.output_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+    rerun = bool(cfg.run.get_path("rerun", False))
+    ckpt = out_dir / "result.json"
+    if ckpt.exists() and not rerun:
+        try:
+            existing = json.loads(ckpt.read_text(encoding="utf-8"))
+        except Exception:
+            existing = None
+        if existing and not existing.get("partial", True):
+            print(f"[resume] {ckpt} already complete; set run.rerun=true to redo.")
+            return
     runner = LoopRunner(
         config_name=cfg.run.name,
         architecture=cfg.loop.architecture,
