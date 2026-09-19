@@ -7,6 +7,7 @@ baseline with a bootstrap CI excluding zero.
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -76,7 +77,9 @@ def fit_predictor(
         Xtr, ytr = X[train_idx], y[train_idx]
         Xte = X[test_idx]
         # Median-impute NaNs using train statistics (frozen, no leakage).
-        med = np.nanmedian(Xtr, axis=0)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            med = np.nanmedian(Xtr, axis=0)
         med = np.where(np.isnan(med), 0.0, med)
         Xtr = np.where(np.isnan(Xtr), med, Xtr)
         Xte = np.where(np.isnan(Xte), med, Xte)

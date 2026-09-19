@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import warnings
 from pathlib import Path
 
 import numpy as np
@@ -43,7 +44,8 @@ def _loco_cv(X, y, groups, spec):
         test_idx = [i for i, x in enumerate(groups) if x == g]
         train_idx = [i for i, x in enumerate(groups) if x != g]
         Xtr, ytr, Xte = X[train_idx], y[train_idx], X[test_idx]
-        with np.errstate(invalid="ignore"):
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
             med = np.nanmedian(Xtr, axis=0)
         med = np.where(np.isnan(med), 0.0, med)
         Xtr = np.where(np.isnan(Xtr), med, Xtr)
