@@ -38,6 +38,14 @@ def _group_key(result: dict) -> str:
     return f"{r['verifier_name']}|{r['architecture']}"
 
 
+def _to_padded_array(seqs: list[list[float]]) -> np.ndarray:
+    max_len = max(len(s) for s in seqs) if seqs else 0
+    out = np.full((len(seqs), max_len), np.nan)
+    for i, s in enumerate(seqs):
+        out[i, : len(s)] = s
+    return out
+
+
 def _trajectories(results: list[dict]) -> dict:
     grouped: dict[str, list[list[float]]] = defaultdict(list)
     for res in results:
@@ -45,12 +53,11 @@ def _trajectories(results: list[dict]) -> dict:
         grouped[_group_key(res)].append([rd["accuracy"] for rd in r["rounds"]])
     out = {}
     for key, trajs in grouped.items():
-        arr = np.array(trajs, dtype=float)
-        out[key] = {
-            "n_seeds": arr.shape[0],
-            "mean": arr.mean(axis=0).tolist(),
-            "std": arr.std(axis=0).tolist() if arr.shape[0] > 1 else [0.0] * arr.shape[1],
-        }
+        arr = _to_padded_array(trajs)
+        with np.errstate(invalid="ignore"):
+            mean = np.nanmean(arr, axis=0).tolist()
+            std = np.nanstd(arr, axis=0).tolist() if arr.shape[0] > 1 else [0.0] * arr.shape[1]
+        out[key] = {"n_seeds": arr.shape[0], "mean": mean, "std": std}
     return out
 
 
@@ -62,7 +69,7 @@ def _rho_trajectories(results: list[dict]) -> dict:
         grouped[_group_key(res)].append(seq)
     out = {}
     for key, trajs in grouped.items():
-        arr = np.array(trajs, dtype=float)
+        arr = _to_padded_array(trajs)
         out[key] = {
             "n_seeds": arr.shape[0],
             "mean": np.nanmean(arr, axis=0).tolist(),
