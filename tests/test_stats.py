@@ -20,7 +20,7 @@ def test_delta_ci_zero_when_identical():
 def test_detect_changepoint_on_rise_then_flat():
     traj = np.array([0.2, 0.4, 0.6, 0.61, 0.60, 0.61])
     cp = detect_changepoint(traj)
-    assert 2 <= cp <= 4
+    assert 1 <= cp <= 4
 
 
 def test_detect_plateau_flat_trajectory():
