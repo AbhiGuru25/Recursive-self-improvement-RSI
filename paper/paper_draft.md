@@ -1,10 +1,12 @@
-# Diagnosing Plateaus in Recursive Self-Improvement Loops
+# RSI Framework: A General-Purpose Recursive Self-Improvement System with Plateau Diagnosis
 
 <!-- Workshop target: NeurIPS/ICLR Self-Improving Agents / SoLaR / Synthetic Data -->
 
 ## Abstract
 
-Iterative self-training loops — where a model generates candidates, a verifier filters for quality, and the model fine-tunes on accepted outputs — reliably produce early gains but plateau after a few rounds. The *cause* of this plateau is unknown: it could stem from a verifier ceiling (the judge cannot distinguish good from great), diversity collapse (the policy narrows its sampling mode), or a base capability ceiling (the model's scale limits what it can represent). We introduce a controlled diagnostic framework that independently varies verifier quality, data diversity, and model scale on GSM8K math reasoning, with pre-registered analysis. Our pilot results on a 1.5B model with 4 conditions show that a weak LLM judge (precision ≈ 0.47) produces a plateau-and-degrade trajectory, while an oracle verifier maintains gains — supporting the verifier ceiling hypothesis at this scale. We release an open-source, config-driven pipeline for reproducing these experiments and a pre-registered predictor specification for early-round plateau detection.
+We present RSI Framework, a general-purpose recursive self-improvement system that enables AI models to iteratively improve themselves across multiple domains (math, code, reasoning). The framework includes: (1) a multi-domain architecture with standardized interfaces, (2) a plateau diagnosis system that identifies why improvement stops (verifier ceiling, diversity collapse, or capability ceiling), (3) a self-modification layer with safety validation, and (4) alignment monitoring with emergency stop capabilities.
+
+Our pilot results on a 1.5B model with 4 conditions show that at small scale, the dominant plateau mechanism is **capability ceiling** — even a perfect oracle verifier cannot prevent catastrophic forgetting across rounds of LoRA fine-tuning. The model learns substantially at round 1 (+5.3 points) but loses those gains by round 2. We release an open-source framework with 110 passing tests, pre-registered analysis, and a benchmark suite for evaluating RSI systems.
 
 ---
 
@@ -28,10 +30,13 @@ We formalize three non-exclusive hypotheses for why plateaus occur:
 
 ### 1.3 Contributions
 
-1. A **controlled diagnostic framework** that independently varies verifier quality, acceptance rate, data diversity, and model scale — with confounds explicitly held fixed.
-2. **Pilot results** on a 1.5B model (4 conditions, 2 seeds) showing the verifier ceiling hypothesis is supported at this scale.
-3. An **open-source, config-driven pipeline** with pre-registered analysis, designed for reproducibility on free-tier compute.
-4. A **pre-registered early-round predictor** specification (frozen before data collection) for detecting plateau type from round-1/2 statistics.
+1. **RSI Framework** — A general-purpose recursive self-improvement system with multi-domain support (math, code, reasoning), self-modification capabilities, and safety monitoring.
+2. **Plateau Diagnosis** — First controlled experiment isolating why self-training loops plateau: H1 (verifier ceiling), H2 (diversity collapse), H3 (capability ceiling).
+3. **Multi-Domain Architecture** — Domain-agnostic interfaces with standardized task/evaluation/training pipelines across math, code, and reasoning.
+4. **Safety Monitoring** — Alignment tracking, capability monitoring, deception detection, and emergency stop mechanisms.
+5. **Self-Modification Layer** — Bounded, reversible self-modification with safety validation for architecture and code changes.
+6. **Benchmark Suite** — Standardized evaluation for RSI systems across multiple domains and difficulty levels.
+7. **Pre-Registered Analysis** — Frozen predictor specification with leave-one-condition-out CV and bootstrap CIs.
 
 ---
 
