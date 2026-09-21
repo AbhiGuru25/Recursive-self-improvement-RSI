@@ -1,0 +1,50 @@
+# Scale experiment: test H3 (capability ceiling) across model sizes
+# Run on Kaggle with GPU T4 x2, Internet On
+# Expected: 3B/7B should show learning where 1.5B could not
+
+policy:
+  model_name: "Qwen/Qwen2.5-3B-Instruct"
+  lora:
+    r: 32
+    lora_alpha: 64
+    target_modules: ["q_proj", "v_proj", "k_proj", "o_proj", "gate_proj", "up_proj", "down_proj"]
+    lora_dropout: 0.05
+  dtype: "auto"
+  max_seq_len: 1024
+
+generation:
+  k: 8
+  temperature: 0.7
+  top_p: 0.95
+  batch_size: 16
+  max_new_tokens: 512
+
+training:
+  epochs_per_round: 1
+  lr: 4e-5
+  lr_scheduler: "cosine"
+  warmup_ratio: 0.1
+  weight_decay: 0.01
+  bf16: true
+
+data:
+  train_size: 200
+  test_size: 1319
+  dataset: "openai/gsm8k"
+
+verifier:
+  type: "oracle"
+  match_acceptance_rate: false
+
+loop:
+  architecture: "star"
+  rounds: 5
+  fixed_data: false
+
+eval:
+  batch_size: 32
+
+run:
+  name: "scale_3b"
+  seed: 0
+  output_dir: "artifacts/scale/3b_s0"
