@@ -1,0 +1,11 @@
+{
+  "target": "final_accuracy",
+  "n": 5,
+  "models": {
+    "ridge": {"rmse": 0.0323, "baseline_rmse": 0.0213, "reduction_pct": -40.51, "ci_low_pct": -86.67, "ci_high_pct": 33.71, "success": false},
+    "gbt": {"rmse": 0.0319, "baseline_rmse": 0.0213, "reduction_pct": -39.20, "ci_low_pct": -85.05, "ci_high_pct": 48.91, "success": false}
+  },
+  "best_model": "gbt",
+  "conditions": ["oracle|rest", "oracle|star", "random|star"],
+  "features": ["acc_round1", "delta_acc_1to2", "rho_selfbleu_1to2", "acceptance_rate_r1", "self_consistency_r1", "mean_response_len_r1", "token_entropy_r1"]
+}

@@ -1,0 +1,13 @@
+{
+  "metadata": {"timestamp_utc": "2026-09-20", "torch": "2.14.0+cu124", "cuda_available": true},
+  "result": {
+    "config_name": "pilot_weak", "architecture": "star", "verifier_name": "random", "seed": 1,
+    "rounds": [
+      {"round": 0, "accuracy": 0.333, "n_train_kept": 298, "n_train_total": 600, "acceptance_rate": 0.497, "diversity": {"self_bleu": 0.192, "token_entropy": 0.7, "self_bleu_correct": 0.001, "self_consistency": 0.515, "mean_response_len": 3.0}, "rho": {"self_bleu": 1.0, "token_entropy": 1.0, "self_bleu_correct": 1.0, "self_consistency": 1.0, "mean_response_len": 1.0}, "train_loss": 0.95},
+      {"round": 1, "accuracy": 0.343, "n_train_kept": 305, "n_train_total": 600, "acceptance_rate": 0.508, "diversity": {"self_bleu": 0.194, "token_entropy": 0.7, "self_bleu_correct": 0.001, "self_consistency": 0.430, "mean_response_len": 3.0}, "rho": {"self_bleu": 1.002, "token_entropy": 1.0, "self_bleu_correct": 1.0, "self_consistency": 0.810, "mean_response_len": 1.0}, "train_loss": 0.771},
+      {"round": 2, "accuracy": 0.343, "n_train_kept": 290, "n_train_total": 600, "acceptance_rate": 0.483, "diversity": {"self_bleu": 0.202, "token_entropy": 0.7, "self_bleu_correct": 0.001, "self_consistency": 0.450, "mean_response_len": 3.0}, "rho": {"self_bleu": 1.015, "token_entropy": 1.0, "self_bleu_correct": 1.0, "self_consistency": 0.848, "mean_response_len": 1.0}, "train_loss": 0.791}
+    ],
+    "plateau": {"plateau_round": 2, "plateau_round_low": 2, "plateau_round_high": 2, "rule_ci": 3, "rule_changepoint": 2, "agree": true, "deltas": [0.015, 0.0]},
+    "calibration": null
+  }
+}

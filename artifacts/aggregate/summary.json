@@ -1,0 +1,37 @@
+{
+  "n_runs": 10,
+  "accuracy_trajectories": {
+    "oracle|star": {
+      "n_seeds": 2,
+      "mean": [0.327, 0.343, 0.343],
+      "std": [0.007, 0.037, 0.030]
+    },
+    "weak|star": {
+      "n_seeds": 2,
+      "mean": [0.337, 0.343, 0.327],
+      "std": [0.0, 0.0, 0.0]
+    },
+    "random|star": {
+      "n_seeds": 2,
+      "mean": [0.333, 0.343, 0.343],
+      "std": [0.0, 0.0, 0.0]
+    },
+    "oracle|rest": {
+      "n_seeds": 2,
+      "mean": [0.327, 0.307, 0.307],
+      "std": [0.0, 0.0, 0.0]
+    }
+  },
+  "table": [
+    {"config": "pilot_oracle", "verifier": "oracle", "architecture": "star", "seed": 0, "plateau_round": 1, "final_accuracy": 0.373},
+    {"config": "pilot_oracle", "verifier": "oracle", "architecture": "star", "seed": 1, "plateau_round": 1, "final_accuracy": 0.313},
+    {"config": "pilot_weak", "verifier": "weak", "architecture": "star", "seed": 0, "plateau_round": 1, "final_accuracy": 0.327, "judge_precision": 0.473},
+    {"config": "pilot_weak", "verifier": "weak", "architecture": "star", "seed": 1, "plateau_round": 1, "final_accuracy": 0.327, "judge_precision": 0.473},
+    {"config": "pilot_random_filter", "verifier": "random", "architecture": "star", "seed": 0, "plateau_round": 2, "final_accuracy": 0.343},
+    {"config": "pilot_random_filter", "verifier": "random", "architecture": "star", "seed": 1, "plateau_round": 2, "final_accuracy": 0.343},
+    {"config": "pilot_fixed_data", "verifier": "oracle", "architecture": "star", "seed": 0, "plateau_round": 1, "final_accuracy": 0.307},
+    {"config": "pilot_fixed_data", "verifier": "oracle", "architecture": "star", "seed": 1, "plateau_round": 1, "final_accuracy": 0.305},
+    {"config": "pilot_rest", "verifier": "oracle", "architecture": "rest", "seed": 0, "plateau_round": 1, "final_accuracy": 0.307},
+    {"config": "pilot_rest", "verifier": "oracle", "architecture": "rest", "seed": 1, "plateau_round": 1, "final_accuracy": 0.307}
+  ]
+}
